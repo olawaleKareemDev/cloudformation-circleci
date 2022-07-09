@@ -30,6 +30,10 @@ jobs:
       - image: python:3.10.5-alpine3.16
     steps:
       - checkout
+      - run:
+          name: Install dependencies (openssh)
+          command: |
+            apk add --update openssh-server 
       - add_ssh_keys:
           fingerprints:
             - "8f:d4:90:fd:dc:a3:ee:8e:56:7a:c1:86:d2:a4:88:ae"
@@ -37,12 +41,6 @@ jobs:
           name: Install Ansible
           command: |
             apk add --update ansible
-
-      - run:
-          name: Install dependencies (openssh)
-          command: |
-            apk add --update openssh-server 
-
       - run:
           name: Run Playbook and Configure server
           command: |
