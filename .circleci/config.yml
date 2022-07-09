@@ -1,10 +1,7 @@
 version: 2.1
-# orbs:
-#   # Choose either one of the orbs below
-#   # welcome: circleci/welcome-orb@0.4.1
-#   aws-cli: circleci/aws-cli@2.0.3
 
 jobs:
+
   # test-job:  
   #     docker:
   #       - image: cimg/base:stable
@@ -45,6 +42,25 @@ jobs:
           name: Run Playbook and Configure server
           command: |
             ansible-playbook -i inventory.txt main-remote.yml 
+
+
+  smoke_test:
+  docker:
+    - image: alpine:latest
+  steps:
+    - run: apk add --update curl
+    - run:
+        name: smoke test
+        command: |
+          URL="http://3.17.69.112:3000"
+          # Test if website exists
+          if curl -s --head ${URL} 
+          then
+            return 0
+          else
+            return 1
+          fi
+
 workflows:
   # Name the workflow
   myWorkflow:
