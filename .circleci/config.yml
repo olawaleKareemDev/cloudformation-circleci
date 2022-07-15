@@ -101,5 +101,5 @@ workflows:
       - test-job
       - create_infrastructure
       - configure_infrastructure:
-          requires: [create_infrastructure]
+          requires: [test-job, create_infrastructure]
       # - smoke_test
