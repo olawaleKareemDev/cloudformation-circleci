@@ -15,6 +15,13 @@ jobs:
       steps:
         - checkout
         - run:
+            name: Install tar and gzip
+            command: |
+              yum update
+              yum upgrade
+              yum install tar -y
+              yum install gzip -y
+        - run:
             name: Create Cloudformation Stack
             command: |
               aws cloudformation deploy \
@@ -93,5 +100,6 @@ workflows:
     jobs:
       - test-job
       - create_infrastructure
-      - configure_infrastructure
+      - configure_infrastructure:
+        requires: [create_infrastructure]
       # - smoke_test
