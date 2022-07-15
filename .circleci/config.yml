@@ -2,34 +2,51 @@ version: 2.1
 
 jobs:
 
-  # test-job:  
-  #     docker:
-  #       - image: cimg/base:stable
-  #     steps:
-  #       - checkout 
-  #       - run: echo "hello world" 
+  test-job:  
+      docker:
+        - image: cimg/base:stable
+      steps:
+        - checkout 
+        - run: echo "hello world" 
 
-  # create_infrastructure: 
-  #     docker:
-  #       - image: amazon/aws-cli
-  #     steps:
-  #       - checkout
-  #       - run:
-  #           name: Create Cloudformation Stack
-  #           command: |
-  #             aws cloudformation deploy \
-  #               --template-file infra.yml \
-  #               --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5} \
-  #               --region us-east-2
+  create_infrastructure: 
+      docker:
+        - image: amazon/aws-cli
+      steps:
+        - checkout
+        - run:
+            name: Create Cloudformation Stack
+            command: |
+              aws cloudformation deploy \
+                --template-file infra.yml \
+                --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5} \
+                --region us-east-2
+        - run:
+            name: Get instance IDs
+            command: |
+              echo [all] > inventory.txt
+              aws --region us-east-2 \
+                  ec2 describe-instances \
+                  --query 'Reservations[*].Instances[*].[PublicIpAddress]' \
+                  --output text >> inventory.txt
+              cat inventory.txt
+              pwd
+              ls
+        - persist_to_workspace:
+            root: /root/project
+            paths:
+              - inventory.txt
 
   configure_infrastructure: 
     docker:
       - image: python:3.7-alpine3.16
     steps:
       - checkout
+      - attach_workspace:
+          at: /root/project
       - add_ssh_keys:
           fingerprints:
-            - "2b:8b:39:d2:ce:fa:4a:8d:cd:b4:b7:6b:8a:8e:6f:ac"
+            - "e1:bb:f7:45:7b:3b:91:30:ca:a9:22:39:86:d5:1c:2e"
       - run:
           name: Install Ansible
           command: |
@@ -43,29 +60,38 @@ jobs:
           command: |
             ansible-playbook -i inventory.txt main-remote.yml 
 
+  # smoke_test:
+  #   docker:
+  #     - image: alpine:latest
+  #   steps:
+  #     - run: apk add --update curl
+  #     - run:
+  #         name: smoke test
+  #         command: |
+  #           URL="http://3.17.69.112:3000"
+  #           # Test if website exists
+  #           if curl -s --head ${URL} 
+  #           then
+  #             return 0
+  #           else
+  #             return 1
+  #           fi
 
-  smoke_test:
-    docker:
-      - image: alpine:latest
-    steps:
-      - run: apk add --update curl
-      - run:
-          name: smoke test
-          command: |
-            URL="http://3.17.69.112:3000"
-            # Test if website exists
-            if curl -s --head ${URL} 
-            then
-              return 0
-            else
-              return 1
-            fi
+  # destroy_environment:
+  #   steps:
+  #     - run:
+  #         name: Destroy environment
+  #         # ${CIRCLE_WORKFLOW_ID} is a Built-in environment variable 
+  #         # ${CIRCLE_WORKFLOW_ID:0:5} takes the first 5 chars of the variable CIRCLE_CI_WORKFLOW_ID 
+  #         when: on_fail
+  #         command: |
+  #           aws cloudformation delete-stack --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:7}  --region us-east-2
 
 workflows:
   # Name the workflow
   myWorkflow:
     jobs:
-      # - test-job
-      # - create_infrastructure
-      # - configure_infrastructure
-      - smoke_test
+      - test-job
+      - create_infrastructure
+      - configure_infrastructure
+      # - smoke_test
